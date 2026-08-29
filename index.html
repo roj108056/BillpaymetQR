@@ -13,8 +13,8 @@
         h1 { font-size: 20px; text-align: center; color: #1e293b; margin-top: 0; margin-bottom: 20px; }
         .form-group { margin-bottom: 14px; }
         label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px; }
-        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
-        input:focus { border-color: #2563eb; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: white; }
+        input:focus, select:focus { border-color: #2563eb; }
         .row { display: flex; gap: 10px; }
         .col-1 { flex: 1; }
         .col-2 { flex: 2; }
@@ -31,12 +31,21 @@
         .render-area img, .render-area canvas { max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #cbd5e1; background: white; padding: 4px; }
         .qr-render img { width: 180px; height: 180px; }
         .payload-text { font-size: 10px; color: #64748b; word-break: break-all; margin-top: 8px; text-align: left; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
+        .loading-text { font-size: 12px; color: #2563eb; font-weight: 600; margin-top: 4px; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h1>BOT Bill Payment Generator</h1>
+
+        <div class="form-group">
+            <label>เลือกรายการจาก Google Sheets</label>
+            <select id="sheetDropdown" onchange="onSelectDropdown()">
+                <option value="">-- กำลังโหลดข้อมูล... --</option>
+            </select>
+            <div id="loadingStatus" class="loading-text">กำลังดึงข้อมูลจากชีต...</div>
+        </div>
 
         <form id="qrForm" onsubmit="event.preventDefault(); generateAll();">
             <div class="form-group">
@@ -57,7 +66,7 @@
 
             <div class="form-group">
                 <label>Reference 1 (สูงสุด 20 หลัก)</label>
-                <input type="text" id="ref1" maxlength="20" value="1" placeholder="REF123456789" required>
+                <input type="text" id="ref1" maxlength="20" placeholder="REF123456789" required>
             </div>
 
             <div class="form-group">
@@ -71,7 +80,7 @@
         <div id="result">
             <div class="qr-grid">
                 <div class="box-card">
-                    <div class="title">1. BOT QR TAG30</div>
+                    <div class="title">1. BOT Dynamic QR</div>
                     <div class="sub">(ระบุจำนวนเงิน ล็อกยอดชำระ)</div>
                     <div id="qrDynamicContainer" class="render-area qr-render"></div>
                     <div class="payload-text" id="dynamicPayload"></div>
@@ -104,6 +113,61 @@
     </div>
 
     <script>
+        // *** วาง URL Google Apps Script ของคุณที่นี่ ***
+        const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzPgSUqxknshCktEsEUXkgnwRRZvS1ArpYaR8gvEEG7-qR6kPjr3wfp1kk_t0-F9Qm8lQ/exec';
+
+        let sheetDataList = [];
+
+        // โหลดข้อมูลจาก Google Sheets เมื่อเปิดหน้าเว็บ
+        window.onload = function() {
+            if (GOOGLE_SHEET_WEB_APP_URL === 'วาง_URL_GOOGLE_APPS_SCRIPT_ที่นี่') {
+                document.getElementById('loadingStatus').innerText = 'กรุณาใส่ URL ของ Google Apps Script ในโค้ด';
+                document.getElementById('loadingStatus').style.color = 'red';
+                return;
+            }
+
+            fetch(GOOGLE_SHEET_WEB_APP_URL)
+                .then(response => response.json())
+                .then(data => {
+                    sheetDataList = data;
+                    const dropdown = document.getElementById('sheetDropdown');
+                    dropdown.innerHTML = '<option value="">-- เลือกรายการข้อมูล --</option>';
+
+                    data.forEach((item, index) => {
+                        const opt = document.createElement('option');
+                        opt.value = index;
+                        opt.innerText = `${item.taxId} | Ref1: ${item.ref1} ${item.amount ? '(' + item.amount + ' บ.)' : ''}`;
+                        dropdown.appendChild(opt);
+                    });
+
+                    document.getElementById('loadingStatus').innerText = 'ดึงข้อมูลเรียบร้อยแล้ว!';
+                    document.getElementById('loadingStatus').style.color = 'green';
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('loadingStatus').innerText = 'ไม่สามารถดึงข้อมูลจาก Google Sheets ได้';
+                    document.getElementById('loadingStatus').style.color = 'red';
+                });
+        };
+
+        // เมื่อผู้ใช้เปลี่ยนค่าใน Dropdown
+        function onSelectDropdown() {
+            const index = document.getElementById('sheetDropdown').value;
+            if (index === '') return;
+
+            const selected = sheetDataList[index];
+            if (selected) {
+                document.getElementById('taxId').value = selected.taxId;
+                document.getElementById('suffix').value = selected.suffix || '00';
+                document.getElementById('ref1').value = selected.ref1;
+                document.getElementById('ref2').value = selected.ref2;
+                document.getElementById('amount').value = selected.amount;
+                
+                // สร้าง QR อัตโนมัติทันทีที่เลือก
+                generateAll();
+            }
+        }
+
         function crc16(data) {
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) {
@@ -157,7 +221,6 @@
                     return;
                 }
 
-                // 1. Dynamic QR
                 var merchantInfo = formatTag('00', 'A000000677010112');
                 merchantInfo += formatTag('01', taxId + suffix);
                 merchantInfo += formatTag('02', ref1);
@@ -168,11 +231,9 @@
                 dynamicPayload += formatTag('54', amountFormatted) + formatTag('58', 'TH') + '6304';
                 dynamicPayload += crc16(dynamicPayload);
 
-                // 2. Static QR
                 var staticPayload = formatTag('00', '01') + formatTag('01', '11') + formatTag('30', merchantInfo) + formatTag('53', '764') + formatTag('58', 'TH') + '6304';
                 staticPayload += crc16(staticPayload);
 
-                // 3. Raw Barcode Text Format
                 var CR = String.fromCharCode(13);
                 var centsStr = "0";
                 if (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) {
@@ -180,18 +241,15 @@
                 }
                 var rawBarcodeText = "|" + taxId + suffix + CR + ref1 + CR + (ref2 ? ref2 : "") + CR + centsStr;
 
-                // Render 1 & 2: QR Codes
                 document.getElementById('dynamicPayload').innerText = dynamicPayload;
                 renderQR('qrDynamicContainer', dynamicPayload);
 
                 document.getElementById('staticPayload').innerText = staticPayload;
                 renderQR('qrStaticContainer', staticPayload);
 
-                // Render 3: Barcode Text QR
                 document.getElementById('barcodeTextPayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
                 renderQR('qrBarcodeTextContainer', rawBarcodeText);
 
-                // Render 4: Barcode (Canvas)
                 document.getElementById('barcodePayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
                 JsBarcode("#barcodeCanvas", rawBarcodeText, {
                     format: "CODE128",
