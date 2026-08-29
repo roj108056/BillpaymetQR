@@ -11,19 +11,27 @@
         body { background-color: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 16px; }
         .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 700px; }
         h1 { font-size: 20px; text-align: center; color: #1e293b; margin-top: 0; margin-bottom: 20px; }
-        .form-group { margin-bottom: 14px; }
-        label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: white; }
-        input:focus, select:focus { border-color: #2563eb; }
-        .row { display: flex; gap: 10px; }
+        
+        .form-group { margin-bottom: 16px; width: 100%; }
+        label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+        input, select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: white; color: #0f172a; }
+        input:focus, select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        input[readonly] { background-color: #f8fafc; color: #64748b; }
+        
+        .row { display: flex; gap: 12px; }
         .col-1 { flex: 1; }
         .col-2 { flex: 2; }
-        button { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+        
+        button { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
         button:hover { background: #1d4ed8; }
         
-        #result { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: none; }
+        #result { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: none; }
         .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 15px; }
-        @media (max-width: 550px) { .qr-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 550px) { 
+            .qr-grid { grid-template-columns: 1fr; } 
+            .row { flex-direction: column; gap: 14px; }
+        }
+        
         .box-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; }
         .title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
         .sub { font-size: 11px; color: #64748b; margin-bottom: 8px; }
@@ -32,6 +40,7 @@
         .qr-render img { width: 180px; height: 180px; }
         .payload-text { font-size: 10px; color: #64748b; word-break: break-all; margin-top: 8px; text-align: left; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
         .loading-text { font-size: 12px; color: #2563eb; font-weight: 600; margin-top: 4px; }
+        .section-divider { border-bottom: 1px dashed #cbd5e1; margin: 18px 0; }
     </style>
 </head>
 <body>
@@ -47,6 +56,8 @@
             <div id="loadingStatus" class="loading-text">กำลังดึงข้อมูลจาก Google Sheets...</div>
         </div>
 
+        <div class="section-divider"></div>
+
         <form id="qrForm" onsubmit="event.preventDefault(); generateAll();">
             <div class="form-group">
                 <label>ชื่อผู้รับชำระ (Biller Name)</label>
@@ -58,12 +69,12 @@
                 <input type="text" id="taxId" maxlength="13" value="0994000159510" placeholder="1234567890123" required>
             </div>
 
-            <div class="row form-group">
-                <div class="col-1">
+            <div class="row">
+                <div class="col-1 form-group">
                     <label>Suffix (2 หลัก)</label>
                     <input type="text" id="suffix" maxlength="2" value="00" required>
                 </div>
-                <div class="col-2">
+                <div class="col-2 form-group">
                     <label>จำนวนเงิน (บาท)</label>
                     <input type="number" id="amount" step="0.01" placeholder="0.00">
                 </div>
@@ -76,200 +87,4 @@
 
             <div class="form-group">
                 <label>Reference 2 (สูงสุด 20 หลัก - ถ้ามี)</label>
-                <input type="text" id="ref2" maxlength="20" placeholder="REF223456789">
-            </div>
-
-            <button type="submit">สร้าง QR & Barcode</button>
-        </form>
-
-        <div id="result">
-            <div class="qr-grid">
-                <div class="box-card">
-                    <div class="title">1. BOT Dynamic QR</div>
-                    <div class="sub">(ระบุจำนวนเงิน ล็อกยอดชำระ)</div>
-                    <div id="qrDynamicContainer" class="render-area qr-render"></div>
-                    <div class="payload-text" id="dynamicPayload"></div>
-                </div>
-
-                <div class="box-card">
-                    <div class="title">2. BOT Static QR</div>
-                    <div class="sub">(ไม่ระบุยอด ให้ผู้จ่ายกรอกเอง)</div>
-                    <div id="qrStaticContainer" class="render-area qr-render"></div>
-                    <div class="payload-text" id="staticPayload"></div>
-                </div>
-
-                <div class="box-card">
-                    <div class="title">3. BOT Barcode Text QR</div>
-                    <div class="sub">(ถอดรหัสเป็น QR จากข้อความ Barcode)</div>
-                    <div id="qrBarcodeTextContainer" class="render-area qr-render"></div>
-                    <div class="payload-text" id="barcodeTextPayload"></div>
-                </div>
-
-                <div class="box-card">
-                    <div class="title">4. BOT Standard Barcode</div>
-                    <div class="sub">(มาตรฐาน Code 128 สแกนเคาน์เตอร์)</div>
-                    <div class="render-area">
-                        <canvas id="barcodeCanvas"></canvas>
-                    </div>
-                    <div class="payload-text" id="barcodePayload"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // *** วาง URL Google Apps Script ของคุณที่นี่ ***
-        const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzPgSUqxknshCktEsEUXkgnwRRZvS1ArpYaR8gvEEG7-qR6kPjr3wfp1kk_t0-F9Qm8lQ/exec';
-
-        let sheetDataList = [];
-
-        window.onload = function() {
-            if (GOOGLE_SHEET_WEB_APP_URL === 'วาง_URL_GOOGLE_APPS_SCRIPT_ที่นี่') {
-                document.getElementById('loadingStatus').innerText = 'กรุณาใส่ URL ของ Google Apps Script ในโค้ด';
-                document.getElementById('loadingStatus').style.color = 'red';
-                return;
-            }
-
-            fetch(GOOGLE_SHEET_WEB_APP_URL)
-                .then(response => response.json())
-                .then(data => {
-                    sheetDataList = data;
-                    const dropdown = document.getElementById('sheetDropdown');
-                    dropdown.innerHTML = '<option value="">-- เลือก Biller / รายการชำระ --</option>';
-
-                    data.forEach((item, index) => {
-                        const opt = document.createElement('option');
-                        opt.value = index;
-                        // แสดง BillerName เด่นเป็นหลักใน Dropdown
-                        const nameDisplay = item.billerName ? item.billerName : item.taxId;
-                        const amtDisplay = item.amount ? ` (${item.amount} บ.)` : '';
-                        opt.innerText = `${nameDisplay} | Ref1: ${item.ref1}${amtDisplay}`;
-                        dropdown.appendChild(opt);
-                    });
-
-                    document.getElementById('loadingStatus').innerText = 'ดึงข้อมูลสำเร็จ!';
-                    document.getElementById('loadingStatus').style.color = 'green';
-                })
-                .catch(err => {
-                    console.error(err);
-                    document.getElementById('loadingStatus').innerText = 'ไม่สามารถดึงข้อมูลจาก Google Sheets ได้';
-                    document.getElementById('loadingStatus').style.color = 'red';
-                });
-        };
-
-        function onSelectDropdown() {
-            const index = document.getElementById('sheetDropdown').value;
-            if (index === '') return;
-
-            const selected = sheetDataList[index];
-            if (selected) {
-                document.getElementById('billerName').value = selected.billerName || '';
-                document.getElementById('taxId').value = selected.taxId;
-                document.getElementById('suffix').value = selected.suffix || '00';
-                document.getElementById('ref1').value = selected.ref1;
-                document.getElementById('ref2').value = selected.ref2;
-                document.getElementById('amount').value = selected.amount;
-                
-                generateAll();
-            }
-        }
-
-        function crc16(data) {
-            let crc = 0xFFFF;
-            for (let i = 0; i < data.length; i++) {
-                crc ^= data.charCodeAt(i) << 8;
-                for (let j = 0; j < 8; j++) {
-                    if ((crc & 0x8000) !== 0) {
-                        crc = (crc << 1) ^ 0x1021;
-                    } else {
-                        crc = crc << 1;
-                    }
-                }
-            }
-            return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-        }
-
-        function formatTag(id, value) {
-            const len = value.length.toString().padStart(2, '0');
-            return id + len + value;
-        }
-
-        function renderQR(containerId, payloadText) {
-            try {
-                var qr = qrcode(0, 'M');
-                qr.addData(payloadText);
-                qr.make();
-                document.getElementById(containerId).innerHTML = qr.createImgTag(6, 4);
-            } catch (err) {
-                console.error(err);
-                document.getElementById(containerId).innerText = "ไม่สามารถสร้างภาพ QR ได้";
-            }
-        }
-
-        function generateAll() {
-            try {
-                var taxId = document.getElementById('taxId').value.trim();
-                var suffix = document.getElementById('suffix').value.trim();
-                var ref1 = document.getElementById('ref1').value.trim();
-                var ref2 = document.getElementById('ref2').value.trim();
-                var amountInput = document.getElementById('amount').value;
-
-                if (taxId.length !== 13 || isNaN(taxId)) {
-                    alert('กรุณากรอก Tax ID ให้ครบ 13 หลัก');
-                    return;
-                }
-                if (suffix.length !== 2) {
-                    alert('กรุณากรอก Suffix ให้ครบ 2 หลัก');
-                    return;
-                }
-                if (!ref1) {
-                    alert('กรุณากรอก Reference 1');
-                    return;
-                }
-
-                var merchantInfo = formatTag('00', 'A000000677010112');
-                merchantInfo += formatTag('01', taxId + suffix);
-                merchantInfo += formatTag('02', ref1);
-                if (ref2) merchantInfo += formatTag('03', ref2);
-
-                var dynamicPayload = formatTag('00', '01') + formatTag('01', '12') + formatTag('30', merchantInfo) + formatTag('53', '764');
-                var amountFormatted = (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) ? parseFloat(amountInput).toFixed(2) : '0.00';
-                dynamicPayload += formatTag('54', amountFormatted) + formatTag('58', 'TH') + '6304';
-                dynamicPayload += crc16(dynamicPayload);
-
-                var staticPayload = formatTag('00', '01') + formatTag('01', '11') + formatTag('30', merchantInfo) + formatTag('53', '764') + formatTag('58', 'TH') + '6304';
-                staticPayload += crc16(staticPayload);
-
-                var CR = String.fromCharCode(13);
-                var centsStr = "0";
-                if (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) {
-                    centsStr = Math.round(parseFloat(amountInput) * 100).toString();
-                }
-                var rawBarcodeText = "|" + taxId + suffix + CR + ref1 + CR + (ref2 ? ref2 : "") + CR + centsStr;
-
-                document.getElementById('dynamicPayload').innerText = dynamicPayload;
-                renderQR('qrDynamicContainer', dynamicPayload);
-
-                document.getElementById('staticPayload').innerText = staticPayload;
-                renderQR('qrStaticContainer', staticPayload);
-
-                document.getElementById('barcodeTextPayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
-                renderQR('qrBarcodeTextContainer', rawBarcodeText);
-
-                document.getElementById('barcodePayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
-                JsBarcode("#barcodeCanvas", rawBarcodeText, {
-                    format: "CODE128",
-                    lineColor: "#000",
-                    width: 1.5,
-                    height: 50,
-                    displayValue: true
-                });
-
-                document.getElementById('result').style.display = 'block';
-            } catch (err) {
-                alert('เกิดข้อผิดพลาด: ' + err.message);
-            }
-        }
-    </script>
-</body>
-</html>
+                <input type="text" id="ref
