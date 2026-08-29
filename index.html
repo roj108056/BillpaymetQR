@@ -3,36 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOT Bill Payment QR & Barcode Generator</title>
+    <title>Web App System</title>
+    <!-- QR & Barcode Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 16px; }
-        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 700px; }
-        h1 { font-size: 20px; text-align: center; color: #1e293b; margin-top: 0; margin-bottom: 20px; }
-        
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f1f5f9; color: #0f172a; min-height: 100vh; }
+
+        /* === 1. หน้า Login === */
+        #loginView {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+        }
+        .login-card {
+            background: white;
+            padding: 36px 28px;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 380px;
+        }
+        .login-card h2 { font-size: 22px; margin-bottom: 8px; color: #1e293b; text-align: center; }
+        .login-card p { font-size: 13px; color: #64748b; margin-bottom: 20px; text-align: center; }
+        .login-form .form-group { margin-bottom: 14px; }
+        .login-form label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+        .login-form input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
+        .login-form input:focus { border-color: #2563eb; }
+        .login-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px; }
+        .login-btn:hover { background: #1d4ed8; }
+        .login-error { color: #ef4444; font-size: 12px; font-weight: 500; margin-top: 10px; text-align: center; min-height: 18px; }
+
+        /* === 2. โครงสร้างหลัง Login (Layout) === */
+        #appLayout {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: #1e293b;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #334155; }
+        .sidebar-header h3 { font-size: 18px; font-weight: 700; color: #38bdf8; }
+
+        .menu-list { list-style: none; padding: 15px 10px; }
+        .menu-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #cbd5e1;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .menu-item:hover, .menu-item.active {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .user-profile {
+            padding: 16px 20px;
+            border-top: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: #0284c7; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-details { display: flex; flex-direction: column; width: 120px; }
+        .user-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-email { font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .logout-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 13px; font-weight: 600; padding: 4px 8px; }
+        .logout-btn:hover { text-decoration: underline; }
+
+        .main-content { flex: 1; padding: 32px; overflow-y: auto; }
+        .page-view { display: none; }
+        .page-view.active { display: block; }
+
+        .welcome-card { background: white; padding: 32px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .welcome-card h1 { font-size: 24px; color: #0f172a; margin-bottom: 12px; }
+        .welcome-card p { font-size: 15px; color: #475569; line-height: 1.6; }
+
+        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); max-width: 700px; margin: 0 auto; }
         .form-group { margin-bottom: 16px; width: 100%; }
         label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
         input, select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: white; color: #0f172a; }
         input:focus, select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-        
         .ref-hint { font-size: 11px; color: #2563eb; font-weight: 500; margin-top: 4px; display: block; min-height: 16px; }
-        
         .row { display: flex; gap: 12px; }
         .col-1 { flex: 1; }
         .col-2 { flex: 2; }
-        
-        button { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
-        button:hover { background: #1d4ed8; }
-        
+        .submit-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+        .submit-btn:hover { background: #1d4ed8; }
         #result { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: none; }
         .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 15px; }
-        @media (max-width: 550px) { 
-            .qr-grid { grid-template-columns: 1fr; } 
-            .row { flex-direction: column; gap: 14px; }
-        }
-        
         .box-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; }
         .title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
         .sub { font-size: 11px; color: #64748b; margin-bottom: 8px; }
@@ -41,85 +117,153 @@
         .qr-render img { width: 180px; height: 180px; }
         .loading-text { font-size: 12px; color: #2563eb; font-weight: 600; margin-top: 4px; }
         .section-divider { border-bottom: 1px dashed #cbd5e1; margin: 18px 0; }
+
+        @media (max-width: 768px) {
+            #appLayout { flex-direction: column; }
+            .sidebar { width: 100%; }
+            .qr-grid { grid-template-columns: 1fr; }
+            .row { flex-direction: column; gap: 14px; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h1>BOT Bill Payment Generator</h1>
+    <!-- 1. VIEW: หน้า LOGIN (Username / Password) -->
+    <div id="loginView">
+        <div class="login-card">
+            <h2>ลงชื่อเข้าสู่ระบบ</h2>
+            <p>กรุณากรอก Username และ Password</p>
+            <form class="login-form" onsubmit="event.preventDefault(); handleLogin();">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" required placeholder="กรอก Username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required placeholder="กรอก Password">
+                </div>
+                <button type="submit" class="login-btn" id="loginSubmitBtn">เข้าสู่ระบบ</button>
+                <div class="login-error" id="loginError"></div>
+            </form>
+        </div>
+    </div>
 
-        <div class="form-group">
-            <label>เลือก Biller / รายการชำระเงิน</label>
-            <select id="sheetDropdown" onchange="onSelectDropdown()">
-                <option value="">-- กำลังโหลดข้อมูล... --</option>
-            </select>
-            <div id="loadingStatus" class="loading-text">กำลังดึงข้อมูลจาก Google Sheets...</div>
+    <!-- 2. VIEW: หน้าหลักและเมนูหลัง LOGIN -->
+    <div id="appLayout">
+        <div class="sidebar">
+            <div>
+                <div class="sidebar-header">
+                    <h3>My WebApp</h3>
+                </div>
+                <ul class="menu-list">
+                    <li class="menu-item active" onclick="switchPage('mainPage', this)">
+                        🏠 หน้าหลัก (MainPage)
+                    </li>
+                    <li class="menu-item" onclick="switchPage('qrGeneratorPage', this)">
+                        📱 สร้าง BOT QR & Barcode
+                    </li>
+                </ul>
+            </div>
+
+            <div class="user-profile">
+                <div class="user-info">
+                    <div class="user-avatar" id="avatarText">U</div>
+                    <div class="user-details">
+                        <span class="user-name" id="profileName">User</span>
+                        <span class="user-email" id="profileEmail">@username</span>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="logout()">ออกจากระบบ</button>
+            </div>
         </div>
 
-        <div class="section-divider"></div>
-
-        <form id="qrForm" onsubmit="event.preventDefault(); generateAll();">
-            <div class="form-group">
-                <label>ชื่อผู้รับชำระ (Biller Name)</label>
-                <input type="text" id="billerName" placeholder="ชื่อบริษัท / บัญชีผู้รับชำระ">
-            </div>
-
-            <div class="form-group">
-                <label>Tax ID ผู้รับชำระ (13 หลัก)</label>
-                <input type="text" id="taxId" maxlength="13" value="0994000159510" placeholder="1234567890123" required>
-            </div>
-
-            <div class="row">
-                <div class="col-1 form-group">
-                    <label>Suffix (2 หลัก)</label>
-                    <input type="text" id="suffix" maxlength="2" value="00" required>
-                </div>
-                <div class="col-2 form-group">
-                    <label>จำนวนเงิน (บาท)</label>
-                    <input type="number" id="amount" step="0.01" placeholder="0.00">
+        <div class="main-content">
+            <div id="mainPage" class="page-view active">
+                <div class="welcome-card">
+                    <h1>ยินดีต้อนรับเข้าสู่ระบบ MainPage</h1>
+                    <p>ระบบพร้อมสำหรับการใช้งานแล้ว ท่านสามารถเลือกเข้าใช้งานเมนูต่างๆ ได้ที่แถบเมนูด้านซ้ายมือครับ</p>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Reference 1 (สูงสุด 20 หลัก)</label>
-                <input type="text" id="ref1" maxlength="20" placeholder="REF123456789" required>
-                <span id="ref1Hint" class="ref-hint"></span>
-            </div>
+            <div id="qrGeneratorPage" class="page-view">
+                <div class="card">
+                    <h1 style="font-size: 20px; text-align: center; margin-bottom: 20px;">BOT Bill Payment Generator</h1>
 
-            <div class="form-group">
-                <label>Reference 2 (สูงสุด 20 หลัก - ถ้ามี)</label>
-                <input type="text" id="ref2" maxlength="20" placeholder="REF223456789">
-                <span id="ref2Hint" class="ref-hint"></span>
-            </div>
+                    <div class="form-group">
+                        <label>เลือก Biller / รายการชำระเงิน</label>
+                        <select id="sheetDropdown" onchange="onSelectDropdown()">
+                            <option value="">-- กำลังโหลดข้อมูล... --</option>
+                        </select>
+                        <div id="loadingStatus" class="loading-text">กำลังดึงข้อมูลจาก Google Sheets...</div>
+                    </div>
 
-            <button type="submit">สร้าง QR & Barcode</button>
-        </form>
+                    <div class="section-divider"></div>
 
-        <div id="result">
-            <div class="qr-grid">
-                <div class="box-card">
-                    <div class="title">1. BOT Dynamic QR</div>
-                    <div class="sub">(ระบุจำนวนเงิน ล็อกยอดชำระ)</div>
-                    <div id="qrDynamicContainer" class="render-area qr-render"></div>
-                </div>
+                    <form id="qrForm" onsubmit="event.preventDefault(); generateAll();">
+                        <div class="form-group">
+                            <label>ชื่อผู้รับชำระ (Biller Name)</label>
+                            <input type="text" id="billerName" placeholder="ชื่อบริษัท / บัญชีผู้รับชำระ">
+                        </div>
 
-                <div class="box-card">
-                    <div class="title">2. BOT Static QR</div>
-                    <div class="sub">(ไม่ระบุยอด ให้ผู้จ่ายกรอกเอง)</div>
-                    <div id="qrStaticContainer" class="render-area qr-render"></div>
-                </div>
+                        <div class="form-group">
+                            <label>Tax ID ผู้รับชำระ (13 หลัก)</label>
+                            <input type="text" id="taxId" maxlength="13" value="0994000159510" placeholder="1234567890123" required>
+                        </div>
 
-                <div class="box-card">
-                    <div class="title">3. BOT Barcode Text QR</div>
-                    <div class="sub">(ถอดรหัสเป็น QR จากข้อความ Barcode)</div>
-                    <div id="qrBarcodeTextContainer" class="render-area qr-render"></div>
-                </div>
+                        <div class="row">
+                            <div class="col-1 form-group">
+                                <label>Suffix (2 หลัก)</label>
+                                <input type="text" id="suffix" maxlength="2" value="00" required>
+                            </div>
+                            <div class="col-2 form-group">
+                                <label>จำนวนเงิน (บาท)</label>
+                                <input type="number" id="amount" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
 
-                <div class="box-card">
-                    <div class="title">4. BOT Standard Barcode</div>
-                    <div class="sub">(มาตรฐาน Code 128 สแกนเคาน์เตอร์)</div>
-                    <div class="render-area">
-                        <canvas id="barcodeCanvas"></canvas>
+                        <div class="form-group">
+                            <label>Reference 1 (สูงสุด 20 หลัก)</label>
+                            <input type="text" id="ref1" maxlength="20" placeholder="REF123456789" required>
+                            <span id="ref1Hint" class="ref-hint"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Reference 2 (สูงสุด 20 หลัก - ถ้ามี)</label>
+                            <input type="text" id="ref2" maxlength="20" placeholder="REF223456789">
+                            <span id="ref2Hint" class="ref-hint"></span>
+                        </div>
+
+                        <button type="submit" class="submit-btn">สร้าง QR & Barcode</button>
+                    </form>
+
+                    <div id="result">
+                        <div class="qr-grid">
+                            <div class="box-card">
+                                <div class="title">1. BOT Dynamic QR</div>
+                                <div class="sub">(ระบุจำนวนเงิน ล็อกยอดชำระ)</div>
+                                <div id="qrDynamicContainer" class="render-area qr-render"></div>
+                            </div>
+
+                            <div class="box-card">
+                                <div class="title">2. BOT Static QR</div>
+                                <div class="sub">(ไม่ระบุยอด ให้ผู้จ่ายกรอกเอง)</div>
+                                <div id="qrStaticContainer" class="render-area qr-render"></div>
+                            </div>
+
+                            <div class="box-card">
+                                <div class="title">3. BOT Barcode Text QR</div>
+                                <div class="sub">(ถอดรหัสเป็น QR จากข้อความ Barcode)</div>
+                                <div id="qrBarcodeTextContainer" class="render-area qr-render"></div>
+                            </div>
+
+                            <div class="box-card">
+                                <div class="title">4. BOT Standard Barcode</div>
+                                <div class="sub">(มาตรฐาน Code 128 สแกนเคาน์เตอร์)</div>
+                                <div class="render-area">
+                                    <canvas id="barcodeCanvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -127,17 +271,68 @@
     </div>
 
     <script>
-        const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzPgSUqxknshCktEsEUXkgnwRRZvS1ArpYaR8gvEEG7-qR6kPjr3wfp1kk_t0-F9Qm8lQ/exec';
-
+        const GOOGLE_SHEET_WEB_APP_URL = 'วาง_URL_GOOGLE_APPS_SCRIPT_ที่นี่';
         let sheetDataList = [];
 
-        window.onload = function() {
-            if (GOOGLE_SHEET_WEB_APP_URL === 'วาง_URL_GOOGLE_APPS_SCRIPT_ที่นี่') {
-                document.getElementById('loadingStatus').innerText = 'กรุณาใส่ URL ของ Google Apps Script ในโค้ด';
-                document.getElementById('loadingStatus').style.color = 'red';
-                return;
-            }
+        // === ฟังก์ชัน Login ตรวจสอบกับ Google Sheet ===
+        function handleLogin() {
+            const user = document.getElementById('loginUsername').value.trim();
+            const pass = document.getElementById('loginPassword').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            const submitBtn = document.getElementById('loginSubmitBtn');
 
+            errorDiv.innerText = '';
+            submitBtn.innerText = 'กำลังตรวจสอบ...';
+            submitBtn.disabled = true;
+
+            const url = `${GOOGLE_SHEET_WEB_APP_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(res => {
+                    submitBtn.innerText = 'เข้าสู่ระบบ';
+                    submitBtn.disabled = false;
+
+                    if (res.success) {
+                        document.getElementById('profileName').innerText = res.user.name;
+                        document.getElementById('profileEmail').innerText = `@${res.user.username}`;
+                        document.getElementById('avatarText').innerText = res.user.name.charAt(0).toUpperCase();
+
+                        document.getElementById('loginView').style.display = 'none';
+                        document.getElementById('appLayout').style.display = 'flex';
+
+                        // ล้างช่องกรอก Login
+                        document.getElementById('loginUsername').value = '';
+                        document.getElementById('loginPassword').value = '';
+
+                        // โหลดข้อมูล Biller
+                        initSheetData();
+                    } else {
+                        errorDiv.innerText = res.message || 'การเข้าสู่ระบบล้มเหลว';
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    submitBtn.innerText = 'เข้าสู่ระบบ';
+                    submitBtn.disabled = false;
+                    errorDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+                });
+        }
+
+        function logout() {
+            document.getElementById('loginView').style.display = 'flex';
+            document.getElementById('appLayout').style.display = 'none';
+        }
+
+        function switchPage(pageId, element) {
+            document.querySelectorAll('.page-view').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+
+            document.getElementById(pageId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        function initSheetData() {
             fetch(GOOGLE_SHEET_WEB_APP_URL)
                 .then(response => response.json())
                 .then(data => {
@@ -162,7 +357,7 @@
                     document.getElementById('loadingStatus').innerText = 'ไม่สามารถดึงข้อมูลจาก Google Sheets ได้';
                     document.getElementById('loadingStatus').style.color = 'red';
                 });
-        };
+        }
 
         function onSelectDropdown() {
             const index = document.getElementById('sheetDropdown').value;
