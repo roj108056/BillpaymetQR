@@ -280,45 +280,48 @@
             const pass = document.getElementById('loginPassword').value.trim();
             const errorDiv = document.getElementById('loginError');
             const submitBtn = document.getElementById('loginSubmitBtn');
-
+        
+            if (!user || !pass) {
+                errorDiv.innerText = 'กรุณากรอก Username และ Password';
+                return;
+            }
+        
             errorDiv.innerText = '';
             submitBtn.innerText = 'กำลังตรวจสอบ...';
             submitBtn.disabled = true;
-
+        
+            // สร้าง URL พร้อม Query Parameters
             const url = `${GOOGLE_SHEET_WEB_APP_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
-
-            fetch(url)
+        
+            fetch(url, { method: 'GET', redirect: 'follow' })
                 .then(res => res.json())
                 .then(res => {
                     submitBtn.innerText = 'เข้าสู่ระบบ';
                     submitBtn.disabled = false;
-
+        
                     if (res.success) {
                         document.getElementById('profileName').innerText = res.user.name;
                         document.getElementById('profileEmail').innerText = `@${res.user.username}`;
                         document.getElementById('avatarText').innerText = res.user.name.charAt(0).toUpperCase();
-
+        
                         document.getElementById('loginView').style.display = 'none';
                         document.getElementById('appLayout').style.display = 'flex';
-
-                        // ล้างช่องกรอก Login
+        
                         document.getElementById('loginUsername').value = '';
                         document.getElementById('loginPassword').value = '';
-
-                        // โหลดข้อมูล Biller
+        
                         initSheetData();
                     } else {
                         errorDiv.innerText = res.message || 'การเข้าสู่ระบบล้มเหลว';
                     }
                 })
                 .catch(err => {
-                    console.error(err);
+                    console.error("Login Error Details:", err);
                     submitBtn.innerText = 'เข้าสู่ระบบ';
                     submitBtn.disabled = false;
-                    errorDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+                    errorDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ (เช็ค Console log)';
                 });
         }
-
         function logout() {
             document.getElementById('loginView').style.display = 'flex';
             document.getElementById('appLayout').style.display = 'none';
