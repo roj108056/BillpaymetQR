@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bill Payment QR Code Generator</title>
-    <!-- CSS ตกแต่งหน้าตาแบบเบา ไม่พึ่งพา Library -->
+    <title>Multi-Format Payment QR Generator</title>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 16px; }
-        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
         h1 { font-size: 20px; text-align: center; color: #1e293b; margin-top: 0; margin-bottom: 20px; }
         .form-group { margin-bottom: 14px; }
         label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px; }
@@ -19,19 +18,24 @@
         .col-2 { flex: 2; }
         button { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
         button:hover { background: #1d4ed8; }
-        #result { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; display: none; }
-        #qrImage { width: 200px; height: 200px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; margin: 0 auto; display: block; }
-        .payload-text { font-size: 11px; color: #64748b; word-break: break-all; margin-top: 10px; }
+        
+        #result { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: none; }
+        .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 15px; }
+        @media (max-width: 480px) { .qr-grid { grid-template-columns: 1fr; } }
+        .qr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; }
+        .qr-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+        .qr-box img { width: 180px; height: 180px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; padding: 4px; }
+        .payload-text { font-size: 10px; color: #64748b; word-break: break-all; margin-top: 8px; text-align: left; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>สร้าง QR Code ชำระเงิน</h1>
+        <h1>สร้าง QR Code ชำระเงิน (BOT & Cross-Bank)</h1>
 
         <form id="qrForm">
             <div class="form-group">
-                <label>Tax ID (13 หลัก)</label>
+                <label>Tax ID / เบอร์พร้อมเพย์ (13 หลัก)</label>
                 <input type="text" id="taxId" maxlength="13" placeholder="1234567890123">
             </div>
 
@@ -56,17 +60,30 @@
                 <input type="text" id="ref2" maxlength="20" placeholder="REF223456789">
             </div>
 
-            <button type="button" id="btnSubmit">สร้าง QR Code</button>
+            <button type="button" id="btnSubmit">สร้าง QR Code ทั้งสองแบบ</button>
         </form>
 
         <div id="result">
-            <img id="qrImage" src="" alt="QR Code">
-            <p class="payload-text" id="rawPayload"></p>
+            <div class="qr-grid">
+                <!-- BOT QR (Bill Payment) -->
+                <div class="qr-box">
+                    <div class="qr-title">1. BOT Bill Payment QR</div>
+                    <img id="qrBotImg" src="" alt="BOT QR Code">
+                    <div class="payload-text" id="botPayload"></div>
+                </div>
+
+                <!-- Cross-Bank QR -->
+                <div class="qr-box">
+                    <div class="qr-title">2. Cross-Bank / PromptPay QR</div>
+                    <img id="qrCrossImg" src="" alt="Cross-Bank QR Code">
+                    <div class="payload-text" id="crossPayload"></div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // คำนวณค่า CRC16 ตามมาตรฐาน EMVCo / PromptPay
+        // คำนวณ CRC16 CCITT (Checksum มาตรฐาน EMVCo)
         function crc16(data) {
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) {
@@ -87,7 +104,6 @@
             return id + len + value;
         }
 
-        // ผูก Event ปุ่มกดแบบวานิลลา JS
         document.getElementById('btnSubmit').onclick = function() {
             var taxId = document.getElementById('taxId').value.trim();
             var suffix = document.getElementById('suffix').value.trim();
@@ -95,7 +111,6 @@
             var ref2 = document.getElementById('ref2').value.trim();
             var amountInput = document.getElementById('amount').value;
 
-            // ตรวจสอบข้อมูลแบบแจ้งป๊อปอัพ
             if (taxId.length !== 13 || isNaN(taxId)) {
                 alert('กรุณากรอก Tax ID ให้ครบ 13 หลัก');
                 return;
@@ -109,28 +124,57 @@
                 return;
             }
 
-            // ประกอบ payload
-            var merchantInfo = formatTag('00', 'A000000677010112');
-            merchantInfo += formatTag('01', taxId + suffix);
-            merchantInfo += formatTag('02', ref1);
-            if (ref2) merchantInfo += formatTag('03', ref2);
+            var amountFormatted = (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) 
+                ? parseFloat(amountInput).toFixed(2) 
+                : null;
 
-            var payload = formatTag('00', '01');
-            payload += formatTag('01', '12');
-            payload += formatTag('30', merchantInfo);
-            payload += formatTag('53', '764');
-            
-            if (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) {
-                payload += formatTag('54', parseFloat(amountInput).toFixed(2));
-            }
-            
-            payload += formatTag('58', 'TH');
-            payload += '6304';
-            payload += crc16(payload);
+            // -------------------------------------------------------------
+            // 1. สร้าง BOT QR Code (Bill Payment - Tag 30)
+            // -------------------------------------------------------------
+            var botMerchant = formatTag('00', 'A000000677010112');
+            botMerchant += formatTag('01', taxId + suffix);
+            botMerchant += formatTag('02', ref1);
+            if (ref2) botMerchant += formatTag('03', ref2);
 
-            // แสดงข้อความและดึงรูป QR ผ่าน API ของ Google
-            document.getElementById('rawPayload').innerText = "Payload: " + payload;
-            document.getElementById('qrImage').src = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(payload);
+            var botPayload = formatTag('00', '01');
+            botPayload += formatTag('01', '12'); // Dynamic/Static Bill Payment
+            botPayload += formatTag('30', botMerchant);
+            botPayload += formatTag('53', '764'); // THB
+            if (amountFormatted) botPayload += formatTag('54', amountFormatted);
+            botPayload += formatTag('58', 'TH');
+            botPayload += '6304';
+            botPayload += crc16(botPayload);
+
+            // -------------------------------------------------------------
+            // 2. สร้าง Cross-Bank / Thai QR Payment (Credit Transfer - Tag 29)
+            // -------------------------------------------------------------
+            var crossMerchant = formatTag('00', 'A000000677010111'); // PromptPay AID
+            crossMerchant += formatTag('02', taxId); // Tax ID 13 หลัก
+
+            var crossPayload = formatTag('00', '01');
+            crossPayload += formatTag('01', amountFormatted ? '12' : '11');
+            crossPayload += formatTag('29', crossMerchant);
+            crossPayload += formatTag('53', '764');
+            if (amountFormatted) crossPayload += formatTag('54', amountFormatted);
+            crossPayload += formatTag('58', 'TH');
+            
+            // ใส่ Additional Data (Ref 1/Ref 2) ใน Tag 62 สำหรับ Cross-Bank
+            var addData = formatTag('05', ref1);
+            if (ref2) addData += formatTag('07', ref2);
+            crossPayload += formatTag('62', addData);
+
+            crossPayload += '6304';
+            crossPayload += crc16(crossPayload);
+
+            // -------------------------------------------------------------
+            // Render รูป QR Code และข้อความ Payload
+            // -------------------------------------------------------------
+            document.getElementById('botPayload').innerText = botPayload;
+            document.getElementById('qrBotImg').src = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(botPayload);
+
+            document.getElementById('crossPayload').innerText = crossPayload;
+            document.getElementById('qrCrossImg').src = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(crossPayload);
+
             document.getElementById('result').style.display = 'block';
         };
     </script>
