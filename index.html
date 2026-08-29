@@ -41,7 +41,7 @@
         <form id="qrForm" onsubmit="event.preventDefault(); generateAll();">
             <div class="form-group">
                 <label>Tax ID ผู้รับชำระ (13 หลัก)</label>
-                <input type="text" id="taxId" maxlength="13" value="0994000159510" placeholder="1234567890123" required >
+                <input type="text" id="taxId" maxlength="13" value="0994000159510" placeholder="1234567890123" required>
             </div>
 
             <div class="row form-group">
@@ -71,7 +71,7 @@
         <div id="result">
             <div class="qr-grid">
                 <div class="box-card">
-                    <div class="title">1. BOT QR PromptPay</div>
+                    <div class="title">1. BOT Dynamic QR</div>
                     <div class="sub">(ระบุจำนวนเงิน ล็อกยอดชำระ)</div>
                     <div id="qrDynamicContainer" class="render-area qr-render"></div>
                     <div class="payload-text" id="dynamicPayload"></div>
@@ -85,7 +85,7 @@
                 </div>
 
                 <div class="box-card">
-                    <div class="title">3. BOT QR</div>
+                    <div class="title">3. BOT Barcode Text QR</div>
                     <div class="sub">(ถอดรหัสเป็น QR จากข้อความ Barcode)</div>
                     <div id="qrBarcodeTextContainer" class="render-area qr-render"></div>
                     <div class="payload-text" id="barcodeTextPayload"></div>
@@ -172,7 +172,7 @@
                 var staticPayload = formatTag('00', '01') + formatTag('01', '11') + formatTag('30', merchantInfo) + formatTag('53', '764') + formatTag('58', 'TH') + '6304';
                 staticPayload += crc16(staticPayload);
 
-                // 3. Raw Barcode Text Format (ใช้ String.fromCharCode(13) เพื่อหลีกเลี่ยง Chrome Syntax Error)
+                // 3. Raw Barcode Text Format
                 var CR = String.fromCharCode(13);
                 var centsStr = "0";
                 if (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) {
@@ -191,7 +191,7 @@
                 document.getElementById('barcodeTextPayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
                 renderQR('qrBarcodeTextContainer', rawBarcodeText);
 
-                // Render 4: Barcode (ใช้ Canvas เพื่อให้ Chrome แสดงผลได้แน่นอน)
+                // Render 4: Barcode (Canvas)
                 document.getElementById('barcodePayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
                 JsBarcode("#barcodeCanvas", rawBarcodeText, {
                     format: "CODE128",
