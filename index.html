@@ -358,36 +358,42 @@
             const pass = document.getElementById('loginPassword').value.trim();
             const errorDiv = document.getElementById('loginError');
             const submitBtn = document.getElementById('loginSubmitBtn');
-
+        
             if (!user || !pass) {
                 errorDiv.innerText = 'กรุณากรอก Username และ Password';
                 return;
             }
-
+        
             errorDiv.innerText = '';
             submitBtn.innerText = 'กำลังตรวจสอบ...';
             submitBtn.disabled = true;
-
+        
             const url = `${GOOGLE_SHEET_WEB_APP_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
-
+        
             fetch(url, { method: 'GET', redirect: 'follow' })
                 .then(res => res.json())
                 .then(res => {
                     submitBtn.innerText = 'เข้าสู่ระบบ';
                     submitBtn.disabled = false;
-
+        
                     if (res.success) {
+                        // 1. ตั้งค่าโปรไฟล์ผู้ใช้งาน
                         document.getElementById('profileName').innerText = res.user.name;
                         document.getElementById('profileEmail').innerText = `@${res.user.username}`;
                         document.getElementById('avatarText').innerText = res.user.name.charAt(0).toUpperCase();
-
+        
+                        // 2. ซ่อนหน้า Login และแสดง App Layout
                         document.getElementById('loginView').style.display = 'none';
                         document.getElementById('appLayout').style.display = 'flex';
-
+        
+                        // 3. รีเซ็ตช่องกรอก Login
                         document.getElementById('loginUsername').value = '';
                         document.getElementById('loginPassword').value = '';
-
-                        // ดึงข้อมูลทั้งหมดเมื่อ Login สำเร็จ
+        
+                        // 4. บังคับแสดงหน้าหลัก (mainPage) เป็นหน้าแรกเสมอ
+                        resetToMainPage();
+        
+                        // 5. โหลดข้อมูลล่วงหน้าจาก Google Sheet
                         initSheetData();
                         initTestLinks();
                     } else {
@@ -401,7 +407,23 @@
                     errorDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
                 });
         }
-
+        
+        // ฟังก์ชันสำหรับรีเซ็ตหน้าจอให้กลับมาที่ "หน้าหลัก (mainPage)"
+        function resetToMainPage() {
+            // ซ่อนทุกหน้า
+            document.querySelectorAll('.page-view').forEach(page => page.classList.remove('active'));
+            // เอาสถานะ active ออกจากทุกเมนู
+            document.querySelectorAll('.menu-list .menu-item').forEach(item => item.classList.remove('active'));
+        
+            // เปิดหน้า mainPage
+            const mainPage = document.getElementById('mainPage');
+            if (mainPage) mainPage.classList.add('active');
+        
+            // ไฮไลต์เมนูแรกสุด (หน้าหลัก)
+            const firstMenuItem = document.querySelector('.menu-list .menu-item');
+            if (firstMenuItem) firstMenuItem.classList.add('active');
+        }
+        
         function logout() {
             document.getElementById('loginView').style.display = 'flex';
             document.getElementById('appLayout').style.display = 'none';
