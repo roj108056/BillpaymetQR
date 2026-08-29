@@ -28,9 +28,8 @@
         .title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
         .sub { font-size: 11px; color: #64748b; margin-bottom: 8px; }
         .render-area { display: flex; justify-content: center; align-items: center; min-height: 180px; }
-        .render-area img { width: 180px; height: 180px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; padding: 4px; }
-        .barcode-area { margin-top: 16px; }
-        .barcode-area svg { max-width: 100%; height: auto; background: white; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .render-area img, .render-area canvas { max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #cbd5e1; background: white; padding: 4px; }
+        .qr-render img { width: 180px; height: 180px; }
         .payload-text { font-size: 10px; color: #64748b; word-break: break-all; margin-top: 8px; text-align: left; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
     </style>
 </head>
@@ -74,28 +73,30 @@
                 <div class="box-card">
                     <div class="title">1. BOT Dynamic QR</div>
                     <div class="sub">(ระบุจำนวนเงิน ล็อกยอดชำระ)</div>
-                    <div id="qrDynamicContainer" class="render-area"></div>
+                    <div id="qrDynamicContainer" class="render-area qr-render"></div>
                     <div class="payload-text" id="dynamicPayload"></div>
                 </div>
 
                 <div class="box-card">
                     <div class="title">2. BOT Static QR</div>
                     <div class="sub">(ไม่ระบุยอด ให้ผู้จ่ายกรอกเอง)</div>
-                    <div id="qrStaticContainer" class="render-area"></div>
+                    <div id="qrStaticContainer" class="render-area qr-render"></div>
                     <div class="payload-text" id="staticPayload"></div>
                 </div>
 
                 <div class="box-card">
                     <div class="title">3. BOT Barcode Text QR</div>
                     <div class="sub">(ถอดรหัสเป็น QR จากข้อความ Barcode)</div>
-                    <div id="qrBarcodeTextContainer" class="render-area"></div>
+                    <div id="qrBarcodeTextContainer" class="render-area qr-render"></div>
                     <div class="payload-text" id="barcodeTextPayload"></div>
                 </div>
 
                 <div class="box-card">
                     <div class="title">4. BOT Standard Barcode</div>
                     <div class="sub">(มาตรฐาน Code 128 สแกนเคาน์เตอร์)</div>
-                    <div class="barcode-area"><svg id="barcodeSvg"></svg></div>
+                    <div class="render-area">
+                        <canvas id="barcodeCanvas"></canvas>
+                    </div>
                     <div class="payload-text" id="barcodePayload"></div>
                 </div>
             </div>
@@ -136,70 +137,74 @@
         }
 
         function generateAll() {
-            var taxId = document.getElementById('taxId').value.trim();
-            var suffix = document.getElementById('suffix').value.trim();
-            var ref1 = document.getElementById('ref1').value.trim();
-            var ref2 = document.getElementById('ref2').value.trim();
-            var amountInput = document.getElementById('amount').value;
+            try {
+                var taxId = document.getElementById('taxId').value.trim();
+                var suffix = document.getElementById('suffix').value.trim();
+                var ref1 = document.getElementById('ref1').value.trim();
+                var ref2 = document.getElementById('ref2').value.trim();
+                var amountInput = document.getElementById('amount').value;
 
-            if (taxId.length !== 13 || isNaN(taxId)) {
-                alert('กรุณากรอก Tax ID ให้ครบ 13 หลัก');
-                return;
+                if (taxId.length !== 13 || isNaN(taxId)) {
+                    alert('กรุณากรอก Tax ID ให้ครบ 13 หลัก');
+                    return;
+                }
+                if (suffix.length !== 2) {
+                    alert('กรุณากรอก Suffix ให้ครบ 2 หลัก');
+                    return;
+                }
+                if (!ref1) {
+                    alert('กรุณากรอก Reference 1');
+                    return;
+                }
+
+                // 1. Dynamic QR
+                var merchantInfo = formatTag('00', 'A000000677010112');
+                merchantInfo += formatTag('01', taxId + suffix);
+                merchantInfo += formatTag('02', ref1);
+                if (ref2) merchantInfo += formatTag('03', ref2);
+
+                var dynamicPayload = formatTag('00', '01') + formatTag('01', '12') + formatTag('30', merchantInfo) + formatTag('53', '764');
+                var amountFormatted = (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) ? parseFloat(amountInput).toFixed(2) : '0.00';
+                dynamicPayload += formatTag('54', amountFormatted) + formatTag('58', 'TH') + '6304';
+                dynamicPayload += crc16(dynamicPayload);
+
+                // 2. Static QR
+                var staticPayload = formatTag('00', '01') + formatTag('01', '11') + formatTag('30', merchantInfo) + formatTag('53', '764') + formatTag('58', 'TH') + '6304';
+                staticPayload += crc16(staticPayload);
+
+                // 3. Raw Barcode Text Format (ใช้ String.fromCharCode(13) เพื่อหลีกเลี่ยง Chrome Syntax Error)
+                var CR = String.fromCharCode(13);
+                var centsStr = "0";
+                if (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) {
+                    centsStr = Math.round(parseFloat(amountInput) * 100).toString();
+                }
+                var rawBarcodeText = "|" + taxId + suffix + CR + ref1 + CR + (ref2 ? ref2 : "") + CR + centsStr;
+
+                // Render 1 & 2: QR Codes
+                document.getElementById('dynamicPayload').innerText = dynamicPayload;
+                renderQR('qrDynamicContainer', dynamicPayload);
+
+                document.getElementById('staticPayload').innerText = staticPayload;
+                renderQR('qrStaticContainer', staticPayload);
+
+                // Render 3: Barcode Text QR
+                document.getElementById('barcodeTextPayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
+                renderQR('qrBarcodeTextContainer', rawBarcodeText);
+
+                // Render 4: Barcode (ใช้ Canvas เพื่อให้ Chrome แสดงผลได้แน่นอน)
+                document.getElementById('barcodePayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
+                JsBarcode("#barcodeCanvas", rawBarcodeText, {
+                    format: "CODE128",
+                    lineColor: "#000",
+                    width: 1.5,
+                    height: 50,
+                    displayValue: true
+                });
+
+                document.getElementById('result').style.display = 'block';
+            } catch (err) {
+                alert('เกิดข้อผิดพลาด: ' + err.message);
             }
-            if (suffix.length !== 2) {
-                alert('กรุณากรอก Suffix ให้ครบ 2 หลัก');
-                return;
-            }
-            if (!ref1) {
-                alert('กรุณากรอก Reference 1');
-                return;
-            }
-
-            // 1. Dynamic QR (EMVCo Tag 30)
-            var merchantInfo = formatTag('00', 'A000000677010112');
-            merchantInfo += formatTag('01', taxId + suffix);
-            merchantInfo += formatTag('02', ref1);
-            if (ref2) merchantInfo += formatTag('03', ref2);
-
-            var dynamicPayload = formatTag('00', '01') + formatTag('01', '12') + formatTag('30', merchantInfo) + formatTag('53', '764');
-            var amountFormatted = (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) ? parseFloat(amountInput).toFixed(2) : '0.00';
-            dynamicPayload += formatTag('54', amountFormatted) + formatTag('58', 'TH') + '6304';
-            dynamicPayload += crc16(dynamicPayload);
-
-            // 2. Static QR (EMVCo Tag 30)
-            var staticPayload = formatTag('00', '01') + formatTag('01', '11') + formatTag('30', merchantInfo) + formatTag('53', '764') + formatTag('58', 'TH') + '6304';
-            staticPayload += crc16(staticPayload);
-
-            // 3. Raw Barcode Text Format (|TaxID+Suffix\rRef1\rRef2\rAmountInCents)
-            var centsStr = "0";
-            if (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) {
-                centsStr = Math.round(parseFloat(amountInput) * 100).toString();
-            }
-            var rawBarcodeText = "|" + taxId + suffix + "\r" + ref1 + "\r" + (ref2 ? ref2 : "") + "\r" + centsStr;
-
-            // Render 1: BOT Dynamic QR
-            document.getElementById('dynamicPayload').innerText = dynamicPayload;
-            renderQR('qrDynamicContainer', dynamicPayload);
-
-            // Render 2: BOT Static QR
-            document.getElementById('staticPayload').innerText = staticPayload;
-            renderQR('qrStaticContainer', staticPayload);
-
-            // Render 3: Barcode Text QR (สร้าง QR จากข้อความฟอร์แมตเดียวกับ Barcode)
-            document.getElementById('barcodeTextPayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
-            renderQR('qrBarcodeTextContainer', rawBarcodeText);
-
-            // Render 4: BOT Code 128 Barcode
-            document.getElementById('barcodePayload').innerText = rawBarcodeText.replace(/\r/g, "\\r ");
-            JsBarcode("#barcodeSvg", rawBarcodeText, {
-                format: "CODE128",
-                lineColor: "#000",
-                width: 1.8,
-                height: 60,
-                displayValue: true
-            });
-
-            document.getElementById('result').style.display = 'block';
         }
     </script>
 </body>
