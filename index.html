@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Format Payment QR Generator</title>
+    <title>BOT Standard Bill Payment QR Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 16px; }
@@ -23,26 +24,28 @@
         .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 15px; }
         @media (max-width: 480px) { .qr-grid { grid-template-columns: 1fr; } }
         .qr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; }
-        .qr-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
-        .qr-box img { width: 180px; height: 180px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; padding: 4px; }
+        .qr-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+        .qr-sub { font-size: 11px; color: #64748b; margin-bottom: 8px; }
+        .qr-render { display: flex; justify-content: center; align-items: center; min-height: 180px; }
+        .qr-render img { width: 180px; height: 180px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; padding: 4px; }
         .payload-text { font-size: 10px; color: #64748b; word-break: break-all; margin-top: 8px; text-align: left; background: #fff; padding: 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>สร้าง QR Code ชำระเงิน (BOT & Cross-Bank)</h1>
+        <h1>BOT Bill Payment QR Generator</h1>
 
-        <form id="qrForm">
+        <form id="qrForm" onsubmit="event.preventDefault(); generateBOTQRCodes();">
             <div class="form-group">
-                <label>Tax ID / เบอร์พร้อมเพย์ (13 หลัก)</label>
-                <input type="text" id="taxId" maxlength="13" placeholder="1234567890123">
+                <label>Tax ID ผู้รับชำระ (13 หลัก)</label>
+                <input type="text" id="taxId" maxlength="13" placeholder="1234567890123" required>
             </div>
 
             <div class="row form-group">
                 <div class="col-1">
                     <label>Suffix (2 หลัก)</label>
-                    <input type="text" id="suffix" maxlength="2" value="00">
+                    <input type="text" id="suffix" maxlength="2" value="00" required>
                 </div>
                 <div class="col-2">
                     <label>จำนวนเงิน (บาท)</label>
@@ -52,38 +55,38 @@
 
             <div class="form-group">
                 <label>Reference 1 (สูงสุด 20 หลัก)</label>
-                <input type="text" id="ref1" maxlength="20" placeholder="REF123456789">
+                <input type="text" id="ref1" maxlength="20" placeholder="REF123456789" required>
             </div>
 
             <div class="form-group">
-                <label>Reference 2 (ถ้ามี)</label>
+                <label>Reference 2 (สูงสุด 20 หลัก - ถ้ามี)</label>
                 <input type="text" id="ref2" maxlength="20" placeholder="REF223456789">
             </div>
 
-            <button type="button" id="btnSubmit">สร้าง QR Code ทั้งสองแบบ</button>
+            <button type="submit">สร้าง BOT Bill Payment QR Code</button>
         </form>
 
         <div id="result">
             <div class="qr-grid">
-                <!-- BOT QR (Bill Payment) -->
                 <div class="qr-box">
-                    <div class="qr-title">1. BOT Bill Payment QR</div>
-                    <img id="qrBotImg" src="" alt="BOT QR Code">
-                    <div class="payload-text" id="botPayload"></div>
+                    <div class="qr-title">1. BOT Dynamic QR</div>
+                    <div class="qr-sub">(ระบุจำนวนเงิน ล็อกยอดชำระ)</div>
+                    <div id="qrDynamicContainer" class="qr-render"></div>
+                    <div class="payload-text" id="dynamicPayload"></div>
                 </div>
 
-                <!-- Cross-Bank QR -->
                 <div class="qr-box">
-                    <div class="qr-title">2. Cross-Bank / PromptPay QR</div>
-                    <img id="qrCrossImg" src="" alt="Cross-Bank QR Code">
-                    <div class="payload-text" id="crossPayload"></div>
+                    <div class="qr-title">2. BOT Static QR</div>
+                    <div class="qr-sub">(ไม่ระบุยอด ให้ผู้จ่ายกรอกเอง)</div>
+                    <div id="qrStaticContainer" class="qr-render"></div>
+                    <div class="payload-text" id="staticPayload"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // คำนวณ CRC16 CCITT (Checksum มาตรฐาน EMVCo)
+        // คำนวณ CRC16 CCITT สำหรับ BOT Standard
         function crc16(data) {
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) {
@@ -104,7 +107,19 @@
             return id + len + value;
         }
 
-        document.getElementById('btnSubmit').onclick = function() {
+        function renderQR(containerId, payloadText) {
+            try {
+                var qr = qrcode(0, 'M');
+                qr.addData(payloadText);
+                qr.make();
+                document.getElementById(containerId).innerHTML = qr.createImgTag(6, 4);
+            } catch (err) {
+                console.error("QR Render Error: ", err);
+                document.getElementById(containerId).innerText = "ไม่สามารถสร้างภาพ QR ได้";
+            }
+        }
+
+        function generateBOTQRCodes() {
             var taxId = document.getElementById('taxId').value.trim();
             var suffix = document.getElementById('suffix').value.trim();
             var ref1 = document.getElementById('ref1').value.trim();
@@ -124,59 +139,50 @@
                 return;
             }
 
+            // โครงสร้าง Merchant Information ของ BOT Bill Payment (AID: A000000677010112)
+            var merchantInfo = formatTag('00', 'A000000677010112');
+            merchantInfo += formatTag('01', taxId + suffix);
+            merchantInfo += formatTag('02', ref1);
+            if (ref2) merchantInfo += formatTag('03', ref2);
+
+            // -------------------------------------------------------------
+            // 1. Dynamic BOT QR (ระบุจำนวนเงิน)
+            // -------------------------------------------------------------
+            var dynamicPayload = formatTag('00', '01');
+            dynamicPayload += formatTag('01', '12'); // 12 = Dynamic QR
+            dynamicPayload += formatTag('30', merchantInfo);
+            dynamicPayload += formatTag('53', '764'); // สกุลเงิน THB
+            
             var amountFormatted = (amountInput && !isNaN(amountInput) && parseFloat(amountInput) > 0) 
                 ? parseFloat(amountInput).toFixed(2) 
-                : null;
-
-            // -------------------------------------------------------------
-            // 1. สร้าง BOT QR Code (Bill Payment - Tag 30)
-            // -------------------------------------------------------------
-            var botMerchant = formatTag('00', 'A000000677010112');
-            botMerchant += formatTag('01', taxId + suffix);
-            botMerchant += formatTag('02', ref1);
-            if (ref2) botMerchant += formatTag('03', ref2);
-
-            var botPayload = formatTag('00', '01');
-            botPayload += formatTag('01', '12'); // Dynamic/Static Bill Payment
-            botPayload += formatTag('30', botMerchant);
-            botPayload += formatTag('53', '764'); // THB
-            if (amountFormatted) botPayload += formatTag('54', amountFormatted);
-            botPayload += formatTag('58', 'TH');
-            botPayload += '6304';
-            botPayload += crc16(botPayload);
-
-            // -------------------------------------------------------------
-            // 2. สร้าง Cross-Bank / Thai QR Payment (Credit Transfer - Tag 29)
-            // -------------------------------------------------------------
-            var crossMerchant = formatTag('00', 'A000000677010111'); // PromptPay AID
-            crossMerchant += formatTag('02', taxId); // Tax ID 13 หลัก
-
-            var crossPayload = formatTag('00', '01');
-            crossPayload += formatTag('01', amountFormatted ? '12' : '11');
-            crossPayload += formatTag('29', crossMerchant);
-            crossPayload += formatTag('53', '764');
-            if (amountFormatted) crossPayload += formatTag('54', amountFormatted);
-            crossPayload += formatTag('58', 'TH');
+                : '0.00';
+            dynamicPayload += formatTag('54', amountFormatted);
             
-            // ใส่ Additional Data (Ref 1/Ref 2) ใน Tag 62 สำหรับ Cross-Bank
-            var addData = formatTag('05', ref1);
-            if (ref2) addData += formatTag('07', ref2);
-            crossPayload += formatTag('62', addData);
-
-            crossPayload += '6304';
-            crossPayload += crc16(crossPayload);
+            dynamicPayload += formatTag('58', 'TH');
+            dynamicPayload += '6304';
+            dynamicPayload += crc16(dynamicPayload);
 
             // -------------------------------------------------------------
-            // Render รูป QR Code และข้อความ Payload
+            // 2. Static BOT QR (ไม่ระบุจำนวนเงิน ให้ลูกค้าพิมพ์ยอดเอง)
             // -------------------------------------------------------------
-            document.getElementById('botPayload').innerText = botPayload;
-            document.getElementById('qrBotImg').src = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(botPayload);
+            var staticPayload = formatTag('00', '01');
+            staticPayload += formatTag('01', '11'); // 11 = Static QR
+            staticPayload += formatTag('30', merchantInfo);
+            staticPayload += formatTag('53', '764');
+            // Static จะไม่ใส่ Tag 54 (จำนวนเงิน)
+            staticPayload += formatTag('58', 'TH');
+            staticPayload += '6304';
+            staticPayload += crc16(staticPayload);
 
-            document.getElementById('crossPayload').innerText = crossPayload;
-            document.getElementById('qrCrossImg').src = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(crossPayload);
+            // แสดงผลลัพธ์
+            document.getElementById('dynamicPayload').innerText = dynamicPayload;
+            renderQR('qrDynamicContainer', dynamicPayload);
+
+            document.getElementById('staticPayload').innerText = staticPayload;
+            renderQR('qrStaticContainer', staticPayload);
 
             document.getElementById('result').style.display = 'block';
-        };
+        }
     </script>
 </body>
 </html>
