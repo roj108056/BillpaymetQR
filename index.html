@@ -40,14 +40,19 @@
         <h1>BOT Bill Payment Generator</h1>
 
         <div class="form-group">
-            <label>เลือกรายการจาก Google Sheets</label>
+            <label>เลือก Biller / รายการชำระเงิน</label>
             <select id="sheetDropdown" onchange="onSelectDropdown()">
                 <option value="">-- กำลังโหลดข้อมูล... --</option>
             </select>
-            <div id="loadingStatus" class="loading-text">กำลังดึงข้อมูลจากชีต...</div>
+            <div id="loadingStatus" class="loading-text">กำลังดึงข้อมูลจาก Google Sheets...</div>
         </div>
 
         <form id="qrForm" onsubmit="event.preventDefault(); generateAll();">
+            <div class="form-group">
+                <label>ชื่อผู้รับชำระ (Biller Name)</label>
+                <input type="text" id="billerName" placeholder="ชื่อบริษัท / บัญชีผู้รับชำระ">
+            </div>
+
             <div class="form-group">
                 <label>Tax ID ผู้รับชำระ (13 หลัก)</label>
                 <input type="text" id="taxId" maxlength="13" value="0994000159510" placeholder="1234567890123" required>
@@ -80,7 +85,7 @@
         <div id="result">
             <div class="qr-grid">
                 <div class="box-card">
-                    <div class="title">1. BOT QR PromptPay</div>
+                    <div class="title">1. BOT Dynamic QR</div>
                     <div class="sub">(ระบุจำนวนเงิน ล็อกยอดชำระ)</div>
                     <div id="qrDynamicContainer" class="render-area qr-render"></div>
                     <div class="payload-text" id="dynamicPayload"></div>
@@ -118,7 +123,6 @@
 
         let sheetDataList = [];
 
-        // โหลดข้อมูลจาก Google Sheets เมื่อเปิดหน้าเว็บ
         window.onload = function() {
             if (GOOGLE_SHEET_WEB_APP_URL === 'วาง_URL_GOOGLE_APPS_SCRIPT_ที่นี่') {
                 document.getElementById('loadingStatus').innerText = 'กรุณาใส่ URL ของ Google Apps Script ในโค้ด';
@@ -131,16 +135,19 @@
                 .then(data => {
                     sheetDataList = data;
                     const dropdown = document.getElementById('sheetDropdown');
-                    dropdown.innerHTML = '<option value="">-- เลือกรายการข้อมูล --</option>';
+                    dropdown.innerHTML = '<option value="">-- เลือก Biller / รายการชำระ --</option>';
 
                     data.forEach((item, index) => {
                         const opt = document.createElement('option');
                         opt.value = index;
-                        opt.innerText = `${item.taxId} | Ref1: ${item.ref1} ${item.amount ? '(' + item.amount + ' บ.)' : ''}`;
+                        // แสดง BillerName เด่นเป็นหลักใน Dropdown
+                        const nameDisplay = item.billerName ? item.billerName : item.taxId;
+                        const amtDisplay = item.amount ? ` (${item.amount} บ.)` : '';
+                        opt.innerText = `${nameDisplay} | Ref1: ${item.ref1}${amtDisplay}`;
                         dropdown.appendChild(opt);
                     });
 
-                    document.getElementById('loadingStatus').innerText = 'ดึงข้อมูลเรียบร้อยแล้ว!';
+                    document.getElementById('loadingStatus').innerText = 'ดึงข้อมูลสำเร็จ!';
                     document.getElementById('loadingStatus').style.color = 'green';
                 })
                 .catch(err => {
@@ -150,20 +157,19 @@
                 });
         };
 
-        // เมื่อผู้ใช้เปลี่ยนค่าใน Dropdown
         function onSelectDropdown() {
             const index = document.getElementById('sheetDropdown').value;
             if (index === '') return;
 
             const selected = sheetDataList[index];
             if (selected) {
+                document.getElementById('billerName').value = selected.billerName || '';
                 document.getElementById('taxId').value = selected.taxId;
                 document.getElementById('suffix').value = selected.suffix || '00';
                 document.getElementById('ref1').value = selected.ref1;
                 document.getElementById('ref2').value = selected.ref2;
                 document.getElementById('amount').value = selected.amount;
                 
-                // สร้าง QR อัตโนมัติทันทีที่เลือก
                 generateAll();
             }
         }
