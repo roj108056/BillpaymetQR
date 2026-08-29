@@ -48,7 +48,7 @@
             width: 100vw;
         }
 
-        /* TOP BAR (ตรึงอยู่ด้านบนสุด ไม่เลื่อน) */
+        /* TOP BAR */
         .top-bar {
             height: 60px;
             background-color: #1e293b;
@@ -71,7 +71,7 @@
         .logout-btn { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background 0.2s; }
         .logout-btn:hover { background: #dc2626; }
 
-        /* BODY LAYOUT (ด้านล่าง Top Bar) */
+        /* BODY LAYOUT */
         .body-layout {
             display: flex;
             flex: 1;
@@ -79,15 +79,16 @@
             overflow: hidden;
         }
 
-        /* SIDEBAR (แถบเมนูด้านซ้าย) */
+        /* SIDEBAR */
         .sidebar {
-            width: 240px;
+            width: 250px;
             background-color: #0f172a;
             color: #f8fafc;
             display: flex;
             flex-direction: column;
             border-right: 1px solid #1e293b;
             flex-shrink: 0;
+            overflow-y: auto;
         }
         .menu-list { list-style: none; padding: 16px 10px; }
         .menu-item {
@@ -108,7 +109,7 @@
             color: white;
         }
 
-        /* MAIN CONTENT AREA (ส่วนเนื้อหาที่สโครลได้) */
+        /* MAIN CONTENT AREA */
         .main-content { 
             flex: 1; 
             padding: 32px; 
@@ -122,7 +123,37 @@
         .welcome-card h1 { font-size: 24px; color: #0f172a; margin-bottom: 12px; }
         .welcome-card p { font-size: 15px; color: #475569; line-height: 1.6; }
 
-        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); max-width: 700px; margin: 0 auto; }
+        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); max-width: 800px; margin: 0 auto; }
+        
+        /* สไตล์ตาราง/รายการลิงก์ทดสอบ */
+        .link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 16px; }
+        .link-card-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .link-card-item:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border-color: #cbd5e1; }
+        .link-card-title { font-size: 15px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
+        .link-card-url { font-size: 12px; color: #64748b; word-break: break-all; margin-bottom: 14px; }
+        .btn-open-link {
+            display: inline-block;
+            text-align: center;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .btn-open-link:hover { background: #1d4ed8; }
+
+        /* Form QR Generator */
         .form-group { margin-bottom: 16px; width: 100%; }
         label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
         input, select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: white; color: #0f172a; }
@@ -178,7 +209,7 @@
     <!-- 2. VIEW: หน้าหลักและเมนูหลัง LOGIN -->
     <div id="appLayout">
         
-        <!-- TOP BAR (ตรึงอยู่ด้านบนสุดตลอดเวลา) -->
+        <!-- TOP BAR -->
         <div class="top-bar">
             <div class="top-bar-title">My WebApp</div>
             <div class="user-profile">
@@ -193,13 +224,16 @@
             </div>
         </div>
 
-        <!-- BODY LAYOUT (ด้านล่าง Top Bar) -->
+        <!-- BODY LAYOUT -->
         <div class="body-layout">
-            <!-- SIDEBAR เมนูด้านซ้าย -->
+            <!-- SIDEBAR -->
             <div class="sidebar">
                 <ul class="menu-list">
                     <li class="menu-item active" onclick="switchPage('mainPage', this)">
                         🏠 หน้าหลัก (MainPage)
+                    </li>
+                    <li class="menu-item" onclick="switchPage('testLinksPage', this)">
+                        🔗 ลิงก์สำหรับทดสอบ (Test Links)
                     </li>
                     <li class="menu-item" onclick="switchPage('qrGeneratorPage', this)">
                         📱 สร้าง BOT QR & Barcode
@@ -207,8 +241,9 @@
                 </ul>
             </div>
 
-            <!-- MAIN CONTENT AREA (พื้นที่แสดงผล สโครลขึ้น-ลงได้เฉพาะส่วนนี้) -->
+            <!-- MAIN CONTENT AREA -->
             <div class="main-content">
+                <!-- Page 1: หน้าหลัก -->
                 <div id="mainPage" class="page-view active">
                     <div class="welcome-card">
                         <h1>ยินดีต้อนรับเข้าสู่ระบบ MainPage</h1>
@@ -216,6 +251,18 @@
                     </div>
                 </div>
 
+                <!-- Page 2: ลิงก์สำหรับทดสอบ -->
+                <div id="testLinksPage" class="page-view">
+                    <div class="card">
+                        <h1 style="font-size: 20px; margin-bottom: 8px;">รายการลิงก์สำหรับทดสอบ</h1>
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">ดึงข้อมูลลิงก์ทดสอบจาก Google Sheet (แท็บ TestLinks)</p>
+                        
+                        <div id="linksLoading" class="loading-text">กำลังโหลดรายการลิงก์...</div>
+                        <div id="linksContainer" class="link-grid"></div>
+                    </div>
+                </div>
+
+                <!-- Page 3: QR Generator -->
                 <div id="qrGeneratorPage" class="page-view">
                     <div class="card">
                         <h1 style="font-size: 20px; text-align: center; margin-bottom: 20px;">BOT Bill Payment Generator</h1>
@@ -340,7 +387,9 @@
                         document.getElementById('loginUsername').value = '';
                         document.getElementById('loginPassword').value = '';
 
+                        // ดึงข้อมูลทั้งหมดเมื่อ Login สำเร็จ
                         initSheetData();
+                        initTestLinks();
                     } else {
                         errorDiv.innerText = res.message || 'การเข้าสู่ระบบล้มเหลว';
                     }
@@ -364,6 +413,42 @@
 
             document.getElementById(pageId).classList.add('active');
             element.classList.add('active');
+        }
+
+        // ดึงข้อมูล ลิงก์ทดสอบ จาก Sheet "TestLinks"
+        function initTestLinks() {
+            const container = document.getElementById('linksContainer');
+            const loadingText = document.getElementById('linksLoading');
+
+            fetch(`${GOOGLE_SHEET_WEB_APP_URL}?action=getLinks`)
+                .then(response => response.json())
+                .then(data => {
+                    loadingText.style.display = 'none';
+                    container.innerHTML = '';
+
+                    if (!data || data.length === 0) {
+                        container.innerHTML = '<p style="font-size: 13px; color: #94a3b8;">ไม่พบข้อมูลลิงก์ทดสอบ</p>';
+                        return;
+                    }
+
+                    data.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'link-card-item';
+                        card.innerHTML = `
+                            <div>
+                                <div class="link-card-title">${item.title}</div>
+                                <div class="link-card-url">${item.url}</div>
+                            </div>
+                            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="btn-open-link">เปิดลิงก์ ↗</a>
+                        `;
+                        container.appendChild(card);
+                    });
+                })
+                .catch(err => {
+                    console.error(err);
+                    loadingText.innerText = 'เกิดข้อผิดพลาดในการดึงข้อมูลลิงก์';
+                    loadingText.style.color = 'red';
+                });
         }
 
         function initSheetData() {
