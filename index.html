@@ -172,24 +172,24 @@
 
         function onSelectDropdown() {
             const index = document.getElementById('sheetDropdown').value;
-            if (index === '') return;
-
+            if (index === '' || index === undefined) return;
+        
             const selected = sheetDataList[index];
             if (selected) {
+                // ป้องกัน undefined ด้วยการใส่ || '' กำกับไว้ทุกตัว
                 document.getElementById('billerName').value = selected.billerName || '';
-                document.getElementById('taxId').value = selected.taxId;
+                document.getElementById('taxId').value = selected.taxId || '0994000159510';
                 document.getElementById('suffix').value = selected.suffix || '00';
-                document.getElementById('ref1').value = selected.ref1;
-                document.getElementById('ref2').value = selected.ref2;
-                document.getElementById('amount').value = selected.amount;
+                document.getElementById('ref1').value = selected.ref1 || '';
+                document.getElementById('ref2').value = selected.ref2 || '';
+                document.getElementById('amount').value = selected.amount || '';
                 
-                // แสดงคำอธิบาย Ref1 และ Ref2 ใต้ช่องกรอกข้อมูล
                 const ref1Hint = document.getElementById('ref1Hint');
                 const ref2Hint = document.getElementById('ref2Hint');
                 
-                ref1Hint.innerText = selected.ref1Label ? `* Ref.1 หมายถึง: ${selected.ref1Label}` : '';
-                ref2Hint.innerText = selected.ref2Label ? `* Ref.2 หมายถึง: ${selected.ref2Label}` : '';
-
+                if (ref1Hint) ref1Hint.innerText = selected.ref1Label ? `* Ref.1 หมายถึง: ${selected.ref1Label}` : '';
+                if (ref2Hint) ref2Hint.innerText = selected.ref2Label ? `* Ref.2 หมายถึง: ${selected.ref2Label}` : '';
+        
                 generateAll();
             }
         }
