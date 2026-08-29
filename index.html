@@ -16,7 +16,9 @@
         label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; }
         input, select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: white; color: #0f172a; }
         input:focus, select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-        input[readonly] { background-color: #f8fafc; color: #64748b; }
+        
+        /* สไตล์สำหรับข้อความคำอธิบาย Ref */
+        .ref-hint { font-size: 11px; color: #2563eb; font-weight: 500; margin-top: 4px; display: block; min-height: 16px; }
         
         .row { display: flex; gap: 12px; }
         .col-1 { flex: 1; }
@@ -83,11 +85,13 @@
             <div class="form-group">
                 <label>Reference 1 (สูงสุด 20 หลัก)</label>
                 <input type="text" id="ref1" maxlength="20" placeholder="REF123456789" required>
+                <span id="ref1Hint" class="ref-hint"></span>
             </div>
 
             <div class="form-group">
                 <label>Reference 2 (สูงสุด 20 หลัก - ถ้ามี)</label>
                 <input type="text" id="ref2" maxlength="20" placeholder="REF223456789">
+                <span id="ref2Hint" class="ref-hint"></span>
             </div>
 
             <button type="submit">สร้าง QR & Barcode</button>
@@ -129,8 +133,7 @@
     </div>
 
     <script>
-        // *** วาง URL Google Apps Script ของคุณที่นี่ ***
-        const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzPgSUqxknshCktEsEUXkgnwRRZvS1ArpYaR8gvEEG7-qR6kPjr3wfp1kk_t0-F9Qm8lQ/exec';
+        const GOOGLE_SHEET_WEB_APP_URL = 'วาง_URL_GOOGLE_APPS_SCRIPT_ที่นี่';
 
         let sheetDataList = [];
 
@@ -180,6 +183,13 @@
                 document.getElementById('ref2').value = selected.ref2;
                 document.getElementById('amount').value = selected.amount;
                 
+                // แสดงคำอธิบาย Ref1 และ Ref2 ใต้ช่องกรอกข้อมูล
+                const ref1Hint = document.getElementById('ref1Hint');
+                const ref2Hint = document.getElementById('ref2Hint');
+                
+                ref1Hint.innerText = selected.ref1Label ? `* Ref.1 หมายถึง: ${selected.ref1Label}` : '';
+                ref2Hint.innerText = selected.ref2Label ? `* Ref.2 หมายถึง: ${selected.ref2Label}` : '';
+
                 generateAll();
             }
         }
