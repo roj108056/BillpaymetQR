@@ -526,6 +526,16 @@
         let allTestLinks = [];
         let billersData = [];
 
+        // ฟังก์ชันเข้ารหัส Password ด้วย SHA-256 (Web Crypto API)
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
         // 1. NAVIGATION
         function switchPage(pageId) {
             document.querySelectorAll('.page-view').forEach(page => page.classList.remove('active'));
@@ -543,7 +553,7 @@
         }
 
         // 2. AUTHENTICATION
-        function handleLogin() {
+        async function handleLogin() {
             const user = document.getElementById('loginUsername').value.trim();
             const pass = document.getElementById('loginPassword').value.trim();
             const errorDiv = document.getElementById('loginError');
@@ -558,38 +568,40 @@
             submitBtn.innerText = 'กำลังตรวจสอบ...';
             submitBtn.disabled = true;
 
-            const url = `${GOOGLE_SHEET_WEB_APP_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
+            try {
+                // เข้ารหัส Password เป็น SHA-256 Hash ก่อนส่งไปยัง API
+                const hashedPassword = await hashPassword(pass);
+                const url = `${GOOGLE_SHEET_WEB_APP_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(hashedPassword)}`;
 
-            fetch(url, { method: 'GET', redirect: 'follow' })
-                .then(res => res.json())
-                .then(res => {
-                    submitBtn.innerText = 'เข้าสู่ระบบ';
-                    submitBtn.disabled = false;
+                const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+                const data = await res.json();
 
-                    if (res.success) {
-                        document.getElementById('profileName').innerText = res.user.name;
-                        document.getElementById('profileEmail').innerText = `@${res.user.username}`;
-                        document.getElementById('avatarText').innerText = res.user.name.charAt(0).toUpperCase();
+                submitBtn.innerText = 'เข้าสู่ระบบ';
+                submitBtn.disabled = false;
 
-                        document.getElementById('loginView').style.display = 'none';
-                        document.getElementById('appLayout').style.display = 'flex';
+                if (data.success) {
+                    document.getElementById('profileName').innerText = data.user.name;
+                    document.getElementById('profileEmail').innerText = `@${data.user.username}`;
+                    document.getElementById('avatarText').innerText = data.user.name.charAt(0).toUpperCase();
 
-                        document.getElementById('loginUsername').value = '';
-                        document.getElementById('loginPassword').value = '';
+                    document.getElementById('loginView').style.display = 'none';
+                    document.getElementById('appLayout').style.display = 'flex';
 
-                        resetToMainPage();
-                        initSheetData();
-                        initTestLinks();
-                    } else {
-                        errorDiv.innerText = res.message || 'การเข้าสู่ระบบล้มเหลว';
-                    }
-                })
-                .catch(err => {
-                    console.error("Login Error:", err);
-                    submitBtn.innerText = 'เข้าสู่ระบบ';
-                    submitBtn.disabled = false;
-                    errorDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
-                });
+                    document.getElementById('loginUsername').value = '';
+                    document.getElementById('loginPassword').value = '';
+
+                    resetToMainPage();
+                    initSheetData();
+                    initTestLinks();
+                } else {
+                    errorDiv.innerText = data.message || 'การเข้าสู่ระบบล้มเหลว';
+                }
+            } catch (err) {
+                console.error("Login Error:", err);
+                submitBtn.innerText = 'เข้าสู่ระบบ';
+                submitBtn.disabled = false;
+                errorDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ';
+            }
         }
 
         function logout() {
