@@ -225,6 +225,31 @@
             background-color: var(--bg-sidebar);
             padding: 20px 0;
             flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar-refresh-btn {
+            margin: 0 16px 16px 16px;
+            padding: 10px;
+            background-color: #334155;
+            color: #38bdf8;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-refresh-btn:hover {
+            background-color: #475569;
+            color: #ffffff;
         }
 
         .menu-list {
@@ -360,6 +385,31 @@
             margin-top: 10px;
             white-space: pre-wrap;
         }
+
+        /* Toast notification */
+        #toast {
+            visibility: hidden;
+            min-width: 220px;
+            background-color: #0f172a;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px 16px;
+            position: fixed;
+            z-index: 1000;
+            right: 30px;
+            bottom: 30px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 40px;
+        }
     </style>
 </head>
 <body>
@@ -406,17 +456,27 @@
         <div class="body-container">
             <!-- SIDEBAR -->
             <div class="sidebar">
-                <ul class="menu-list">
-                    <li id="nav-mainPage" class="menu-item active" onclick="switchPage('mainPage')">
-                        🏠 หน้าหลัก (MainPage)
-                    </li>
-                    <li id="nav-testLinksPage" class="menu-item" onclick="switchPage('testLinksPage')">
-                        🔗 ลิงก์สำหรับทดสอบ (Test Links)
-                    </li>
-                    <li id="nav-qrGeneratorPage" class="menu-item" onclick="switchPage('qrGeneratorPage')">
-                        📱 สร้าง BOT QR & Barcode
-                    </li>
-                </ul>
+                <div>
+                    <!-- ปุ่มดึงข้อมูล Google Sheet ใหม่ โดยไม่หลุดจากระบบ -->
+                    <button class="sidebar-refresh-btn" onclick="refreshAllData()">
+                        <span id="refreshIcon">🔄</span> โหลดข้อมูลใหม่
+                    </button>
+
+                    <ul class="menu-list">
+                        <li id="nav-mainPage" class="menu-item active" onclick="switchPage('mainPage')">
+                            🏠 หน้าหลัก (MainPage)
+                        </li>
+                        <li id="nav-testLinksPage" class="menu-item" onclick="switchPage('testLinksPage')">
+                            🔗 ลิงก์สำหรับทดสอบ (Test Links)
+                        </li>
+                        <li id="nav-qrGeneratorPage" class="menu-item" onclick="switchPage('qrGeneratorPage')">
+                            📱 สร้าง BOT QR & Barcode
+                        </li>
+                        <li id="nav-hashToolPage" class="menu-item" onclick="switchPage('hashToolPage')">
+                            🔑 เครื่องมือแปลงรหัสผ่าน (Hash Tool)
+                        </li>
+                    </ul>
+                </div>
             </div>
 
             <!-- MAIN CONTENT AREA -->
@@ -433,6 +493,7 @@
                             <li><b>หน้าหลัก (MainPage):</b> หน้าสรุปและต้อนรับ</li>
                             <li><b>ลิงก์สำหรับทดสอบ (Test Links):</b> รวมลิงก์ภายนอกสำหรับทดสอบ ดึงข้อมูลจาก Google Sheet</li>
                             <li><b>สร้าง BOT QR & Barcode:</b> ฟังก์ชันเจเนอเรต PromptPay / Biller QR และ Barcode</li>
+                            <li><b>เครื่องมือแปลงรหัสผ่าน (Hash Tool):</b> แปลง Plain Text Password เป็น SHA-256 Hash เพื่อนำไปบันทึกลง Google Sheet</li>
                         </ul>
                     </div>
                 </div>
@@ -515,9 +576,35 @@
                     </div>
                 </div>
 
+                <!-- PAGE 4: HASH TOOL PAGE (เมนูแปลงรหัสผ่าน) -->
+                <div id="hashToolPage" class="page-view">
+                    <div class="card">
+                        <h1 style="font-size: 20px; margin-bottom: 8px; color: #0f172a;">🔑 เครื่องมือแปลงรหัสผ่าน (Hash Password Generator)</h1>
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 24px;">ป้อนรหัสผ่านแบบ Plain Text เพื่อแปลงเป็นรหัสผ่านที่เข้ารหัสแล้ว (SHA-256) สำหรับนำไปบันทึกใน Google Sheet</p>
+
+                        <div style="max-width: 600px;">
+                            <div class="form-group">
+                                <label for="plainPasswordInput">รหัสผ่านแบบข้อความธรรมดา (Plain Text Password)</label>
+                                <input type="text" id="plainPasswordInput" class="form-control" placeholder="เช่น myPassword123" oninput="generateHashFromInput()">
+                            </div>
+
+                            <div class="form-group" style="margin-top: 20px;">
+                                <label for="hashedPasswordOutput">รหัสผ่านที่เข้ารหัสแล้ว (SHA-256 Hash Result)</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="hashedPasswordOutput" class="form-control" readonly style="background-color: #f8fafc; font-family: monospace; color: #0f172a; font-weight: 600;" placeholder="ผลลัพธ์จะปรากฏที่นี่...">
+                                    <button class="btn-submit" onclick="copyHashResult()" style="width: auto; padding: 0 16px; margin-top: 0; white-space: nowrap;">📋 คัดลอก</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
+
+    <!-- Notification Toast -->
+    <div id="toast">ข้อความแจ้งเตือน</div>
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
@@ -528,6 +615,7 @@
 
         // ฟังก์ชันเข้ารหัส Password ด้วย SHA-256 (Web Crypto API)
         async function hashPassword(password) {
+            if (!password) return '';
             const encoder = new TextEncoder();
             const data = encoder.encode(password);
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -609,7 +697,26 @@
             document.getElementById('appLayout').style.display = 'none';
         }
 
-        // 3. TEST LINKS MODULE
+        // 3. REFRESH DATA (ดึงข้อมูลใหม่โดยไม่ Logoff)
+        async function refreshAllData() {
+            const icon = document.getElementById('refreshIcon');
+            icon.style.display = 'inline-block';
+            icon.style.transition = 'transform 0.5s';
+            icon.style.transform = 'rotate(360deg)';
+
+            showToast('🔄 กำลังอัปเดตข้อมูลจาก Google Sheet...');
+
+            try {
+                await Promise.all([initSheetData(), initTestLinks()]);
+                showToast('✅ อัปเดตข้อมูลเรียบร้อยแล้ว');
+            } catch (e) {
+                showToast('❌ ไม่สามารถอัปเดตข้อมูลได้');
+            } finally {
+                setTimeout(() => { icon.style.transform = 'rotate(0deg)'; }, 500);
+            }
+        }
+
+        // 4. TEST LINKS MODULE
         function initTestLinks() {
             const container = document.getElementById('linksContainer');
             const loading = document.getElementById('linksLoading');
@@ -617,7 +724,7 @@
             if (loading) loading.style.display = 'block';
             if (container) container.innerHTML = '';
 
-            fetch(`${GOOGLE_SHEET_WEB_APP_URL}?action=getLinks`, { method: 'GET', redirect: 'follow' })
+            return fetch(`${GOOGLE_SHEET_WEB_APP_URL}?action=getLinks`, { method: 'GET', redirect: 'follow' })
                 .then(res => res.json())
                 .then(data => {
                     if (loading) loading.style.display = 'none';
@@ -684,9 +791,9 @@
             `).join('');
         }
 
-        // 4. BILLER & QR/BARCODE MODULE
+        // 5. BILLER & QR/BARCODE MODULE
         function initSheetData() {
-            fetch(GOOGLE_SHEET_WEB_APP_URL, { method: 'GET', redirect: 'follow' })
+            return fetch(GOOGLE_SHEET_WEB_APP_URL, { method: 'GET', redirect: 'follow' })
                 .then(res => res.json())
                 .then(data => {
                     billersData = data || [];
@@ -804,6 +911,37 @@
             document.getElementById('rawTextDisplay').innerText = `QR Payload:\n${finalPayload}\n\nBarcode Payload:\n|${taxId}${suffix}\\r${ref1}\\r${ref2}\\r${amountSatang}`;
         }
 
+        // 6. HASH PASSWORD TOOL MODULE
+        async function generateHashFromInput() {
+            const inputVal = document.getElementById('plainPasswordInput').value;
+            const outputElem = document.getElementById('hashedPasswordOutput');
+            
+            if (!inputVal) {
+                outputElem.value = '';
+                return;
+            }
+
+            const hash = await hashPassword(inputVal);
+            outputElem.value = hash;
+        }
+
+        function copyHashResult() {
+            const outputElem = document.getElementById('hashedPasswordOutput');
+            if (!outputElem.value) {
+                showToast('⚠️ ไม่มีข้อมูลให้คัดลอก');
+                return;
+            }
+
+            outputElem.select();
+            navigator.clipboard.writeText(outputElem.value)
+                .then(() => {
+                    showToast('📋 คัดลอกรหัสผ่าน SHA-256 เรียบร้อย!');
+                })
+                .catch(() => {
+                    showToast('❌ ไม่สามารถคัดลอกได้');
+                });
+        }
+
         // HELPERS
         function escapeHtml(text) {
             return String(text || '')
@@ -812,6 +950,15 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
         }
     </script>
 </body>
